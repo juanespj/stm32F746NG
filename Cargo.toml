@@ -1,0 +1,58 @@
+[package]
+name = "stm32f746-disco-display"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+embassy-stm32 = { version = "0.6.0", features = [
+    "stm32f746ng",
+    "defmt",
+    "exti",
+    "time",
+    "time-driver-any",
+    "unstable-pac",
+] }
+embassy-executor = { version = "0.10.0", features = [
+    "platform-cortex-m",
+    "executor-thread",
+    "defmt",
+
+] }
+embassy-time = { version = "0.5.1", features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+] }
+
+cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7.3"
+
+defmt = "1.0.1"
+defmt-rtt = "1.1.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+
+# GUI
+embedded-graphics = "0.8"
+kolibri-embedded-gui = "0.1.0"
+# Used for formatting counter string without alloc
+heapless = "0.8"
+
+# Touch controller — uses embedded-hal 0.2 blocking I2C
+ft5336 = "0.2"
+embedded-hal = "0.2"   # needed to impl Write/WriteRead for BlockingI2c wrapper
+
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = "fat"
+opt-level = "s"
+overflow-checks = false
+
+[profile.dev]
+codegen-units = 1
+debug = 2
+debug-assertions = true
+incremental = false
+opt-level = "z"
+overflow-checks = true

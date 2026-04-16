@@ -157,3 +157,9 @@ them while the display scans out the previous frame.
 | Distorted image | Wrong pixel clock — adjust `pllsai_divr` |
 | Compile error on LTDC pins | Ensure embassy-stm32 git version (crates.io may lag) |
 | `probe-rs` cannot find device | Use the ST-LINK USB port, not the OTG port |
+
+const IMAGE_DATA: &[u8] = include_bytes!("../assets/img.raw");
+
+ // let raw: ImageRaw<Rgb565> = ImageRaw::new(include_bytes!("my_image.raw"), 100);
+        let raw = ImageRaw::<Rgb565>::new(IMAGE_DATA, 300);
+        Image::new(&raw, Point::new(50, 50)).draw(&mut fb).unwrap();

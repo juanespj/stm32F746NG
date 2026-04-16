@@ -27,6 +27,7 @@ use embassy_stm32::ltdc::{
 use embassy_stm32::time::Hertz;
 use embassy_stm32::{bind_interrupts, pac, peripherals, Config};
 use embassy_time::{Delay, Duration, Timer};
+use embedded_graphics::image::{Image, ImageRaw};
 use embedded_graphics::mono_font::ascii;
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*, primitives::Rectangle};
 use ft5336::Ft5336;
@@ -34,10 +35,7 @@ use kolibri_embedded_gui::button::Button;
 use kolibri_embedded_gui::checkbox::Checkbox;
 use kolibri_embedded_gui::label::Label;
 use kolibri_embedded_gui::slider::Slider;
-use kolibri_embedded_gui::style::{
-    medsize_blue_rgb565_style, medsize_crt_rgb565_style, medsize_light_rgb565_style,
-    medsize_retro_rgb565_style, medsize_rgb565_style, medsize_sakura_rgb565_style,
-};
+use kolibri_embedded_gui::style::medsize_rgb565_style; // medsize_blue_rgb565_style, medsize_crt_rgb565_style, medsize_light_rgb565_style,medsize_sakura_rgb565_stylemedsize_retro_rgb565_style
 use kolibri_embedded_gui::{smartstate::SmartstateProvider, ui::Ui};
 use {defmt_rtt as _, panic_probe as _};
 mod touch;
@@ -166,6 +164,11 @@ fn configure_pllsai() {
     while !rcc.cr().read().pllsairdy() {}
 }
 
+// 2x2 RGB565 raw image
+// const IMAGE_RAW: &[u8] = &[0xF8, 0x00, 0xF8, 0x00, 0xF8, 0x00, 0xF8, 0x00];
+const IMAGE_DATA: &[u8] = include_bytes!("../assets/img.raw");
+const BOT_DATA: &[u8] = include_bytes!("../assets/bot.raw");
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -251,8 +254,8 @@ async fn main(_spawner: Spawner) {
     };
 
     let mut display = Ltdc::new_with_pins(
-        p.LTDC, Irqs, p.PI14, p.PI10, p.PI9, p.PE4, p.PJ13, p.PJ14, p.PJ15, p.PI4, p.PI5, p.PI6,
-        p.PI7, p.PJ7, p.PJ8, p.PJ9, p.PJ10, p.PJ11, p.PK0, p.PK1, p.PK2, p.PI15, p.PJ0, p.PJ1,
+        p.LTDC, Irqs, p.PI14, p.PI10, p.PI9, p.PE4, p.PJ13, p.PJ14, p.PJ15, p.PG12, p.PK4, p.PK5,
+        p.PK6, p.PJ7, p.PJ8, p.PJ9, p.PJ10, p.PJ11, p.PK0, p.PK1, p.PK2, p.PI15, p.PJ0, p.PJ1,
         p.PJ2, p.PJ3, p.PJ4, p.PJ5, p.PJ6,
     );
     display.init(&ltdc_config);
@@ -281,7 +284,8 @@ async fn main(_spawner: Spawner) {
     let mut fb = unsafe { FrameBuf::new() };
     let mut touch_handler = TouchHandler::new();
     fb.clear(Rgb565::BLACK).ok();
-
+    let raw = ImageRaw::<Rgb565>::new(BOT_DATA, 212);
+    Image::new(&raw, Point::new(200, 50)).draw(&mut fb).unwrap();
     // -----------------------------------------------------------------------
     // Render + touch loop
     // -----------------------------------------------------------------------
@@ -329,11 +333,17 @@ async fn main(_spawner: Spawner) {
         // Build Kolibri UI
         // -------------------------------------------------------------------
 
-        let mut theme = medsize_blue_rgb565_style();
+        let mut style = medsize_rgb565_style();
 
+        // Change text color
+        style.text_color = Rgb565::RED;
+
+        // Optional:
+        style.background_color = Rgb565::BLACK;
+        style.border_color = Rgb565::WHITE;
         smartstates.restart_counter(); //In Kolibri, Smartstate is used to skip redrawing widgets that haven't changed to save CPU cycles. If the UI thinks the "Label" hasn't changed, it won't push the new pixels to your framebuffer.
 
-        let mut ui = Ui::new_fullscreen(&mut fb, theme);
+        let mut ui = Ui::new_fullscreen(&mut fb, style);
 
         ui.set_buffer(&mut widget_buf);
         // Feed touch input into Kolibri BEFORE adding widgets
@@ -364,6 +374,9 @@ async fn main(_spawner: Spawner) {
             counter = counter.saturating_add(1);
             info!("Counter incremented: {}", counter);
         }
+        let style = ui.style_mut();
+        style.text_color = Rgb565::BLUE;
+
         ui.add_horizontal(Label::new("Theming Example").with_font(ascii::FONT_10X20));
         // Checkbox
         ui.add(Checkbox::new(&mut checked).smartstate(smartstates.nxt()));
@@ -373,7 +386,15 @@ async fn main(_spawner: Spawner) {
 
         // Slider
         ui.add(Label::new("Brightness:").smartstate(smartstates.nxt()));
+
         ui.add(Slider::new(&mut slider_val, 0..=100).smartstate(smartstates.nxt()));
+
+        // Example raw image (you must provide bytes)
+        // let raw: ImageRaw<Rgb565> = ImageRaw::new(include_bytes!("my_image.raw"), 100);
+        // const IMAGE_RAW: &[u16] = &[0xF800; 400];
+        // let raw = ImageRaw::<Rgb565>::new(IMAGE_RAW, 100);
+
+        // let raw: ImageRaw<Rgb565> = ImageRaw::new(include_bytes!("my_image.raw"), 100);
 
         // -------------------------------------------------------------------
         // Flush framebuffer to display (waits for vsync)

@@ -40,6 +40,9 @@ heapless = "0.8"
 ft5336 = "0.2"
 embedded-hal = "0.2"   # needed to impl Write/WriteRead for BlockingI2c wrapper
 
+[build-dependencies]
+image = "0.25.10"
+
 [profile.release]
 codegen-units = 1
 debug = 2
